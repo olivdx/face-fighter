@@ -237,36 +237,53 @@ export function renderOvalPortrait(
   return canvas
 }
 
-/** Place the movable oval frame on a detected face (image stays centered). */
+/**
+ * Fit a detected face: zoom + pan the photo so the face fills the default oval,
+ * then let the oval frame absorb whatever zoom/pan limits could not reach.
+ */
 export function alignFromFaceBox(
   imgWidth: number,
   imgHeight: number,
   box: { originX: number; originY: number; width: number; height: number },
 ): OvalAlignParams {
   const viewport = 512
+  const panRange = viewport * 0.42
   const faceCx = box.originX + box.width / 2
   const faceCy = box.originY + box.height / 2 - box.height * 0.06
 
-  const fit = Math.min(viewport / imgWidth, viewport / imgHeight)
+  const baseFit = Math.min(viewport / imgWidth, viewport / imgHeight)
+  const targetFaceH = (viewport * OVAL.ry * 2) / 1.12
+  const zoom = clamp(targetFaceH / (box.height * baseFit), 0.55, 2.8)
+  const fit = baseFit * zoom
   const drawW = imgWidth * fit
   const drawH = imgHeight * fit
-  const left = (viewport - drawW) / 2
-  const top = (viewport - drawH) / 2
-  const faceVpX = left + (faceCx / imgWidth) * drawW
-  const faceVpY = top + (faceCy / imgHeight) * drawH
 
-  const ovalPanX = faceVpX / viewport - OVAL.cx
-  const ovalPanY = faceVpY / viewport - OVAL.cy
+  // Pan so the face center lands on the default oval center.
+  const panX = clamp(
+    (viewport * OVAL.cx - (viewport / 2 - drawW / 2 + faceCx * fit)) / panRange,
+    -1,
+    1,
+  )
+  const panY = clamp(
+    (viewport * OVAL.cy - (viewport / 2 - drawH / 2 + faceCy * fit)) / panRange,
+    -1,
+    1,
+  )
 
-  const faceH = box.height * fit
-  const ovalScale = clamp((faceH * 1.12) / (viewport * OVAL.ry * 2), 0.65, 1.5)
+  const faceVpX = viewport / 2 - drawW / 2 + panX * panRange + faceCx * fit
+  const faceVpY = viewport / 2 - drawH / 2 + panY * panRange + faceCy * fit
+  const ovalScale = clamp(
+    (box.height * fit * 1.12) / (viewport * OVAL.ry * 2),
+    0.55,
+    1.85,
+  )
 
   return {
-    panX: 0,
-    panY: 0,
-    zoom: 1,
-    ovalPanX: clamp(ovalPanX, -0.35, 0.35),
-    ovalPanY: clamp(ovalPanY, -0.35, 0.35),
+    panX,
+    panY,
+    zoom,
+    ovalPanX: clamp(faceVpX / viewport - OVAL.cx, -0.35, 0.35),
+    ovalPanY: clamp(faceVpY / viewport - OVAL.cy, -0.35, 0.35),
     ovalScale,
     ovalRotation: 0,
   }

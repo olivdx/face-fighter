@@ -354,6 +354,14 @@ export function FaceAlignPanel({
       >
         {busy ? 'Aligning…' : 'Auto-fit frame to face'}
       </button>
+      <button
+        type="button"
+        className="btn btn-secondary align-redetect"
+        disabled={busy}
+        onClick={() => onAlignChange(DEFAULT_OVAL_ALIGN)}
+      >
+        Reset frame (pre-fitted image)
+      </button>
     </div>
   )
 }

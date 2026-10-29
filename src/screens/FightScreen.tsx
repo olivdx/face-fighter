@@ -7,6 +7,7 @@ import {
   type BruiseStamp,
 } from '../game/faceDamage'
 import type { ProcessedFaceImage } from '../game/faceImage'
+import { getMouthBox } from '../game/faceLandmarks'
 import { buildFaceMesh, buildSkullMesh } from '../game/fighterHead'
 import type { GameNetClient } from '../game/net/client'
 import './FightScreen.css'
@@ -302,6 +303,9 @@ export function FightScreen({
     })
     // Lips position on the head (texture v = 0.3 → just below pivot center).
     const mouthLocal = new THREE.Vector3(0, mouthPivotLocalY(), 0.75)
+    void getMouthBox(face.previewUrl).then((m) => {
+      mouthLocal.y = mouthPivotLocalY(m.cy)
+    })
     const toothSpawn = new THREE.Vector3()
 
     function spawnTeeth(side: number, count: number) {

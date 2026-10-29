@@ -1,4 +1,5 @@
 import { LANDMARK_V, MOUNT_LANDMARKS, OVAL } from './faceAlign'
+import { getMouthBox, type MouthBox } from './faceLandmarks'
 
 const MOUTH_SRC = '/mount.png'
 const MOUTH_SRC_FALLBACK = '/mount.jpg'
@@ -727,11 +728,12 @@ export async function renderFightFace(
   const bruises = options.bruises ?? []
 
   const loaders: Promise<unknown>[] = [loadImage(previewUrl)]
-  if (mouthBroken) loaders.push(getMouthOverlay())
+  if (mouthBroken) loaders.push(getMouthOverlay(), getMouthBox(previewUrl))
 
   const results = await Promise.all(loaders)
   const faceImg = results[0] as HTMLImageElement
   const mouthOverlay = mouthBroken ? (results[1] as MouthOverlay) : null
+  const mouth = mouthBroken ? (results[2] as MouthBox) : MOUNT_LANDMARKS.mouth
 
   const size = faceImg.naturalWidth
   const canvas = document.createElement('canvas')
@@ -759,7 +761,6 @@ export async function renderFightFace(
   }
 
   if (mouthBroken && mouthOverlay) {
-    const mouth = MOUNT_LANDMARKS.mouth
     const mouthCx = size * mouth.cx
     const mouthCy = size * mouth.cy
     const destW = size * mouth.rx * 2
@@ -798,7 +799,7 @@ export async function renderDamagedFace(previewUrl: string): Promise<HTMLCanvasE
 /** Mouth center in normalized texture coords (for 3D tuning). */
 export const MOUTH_TEXTURE_CY = OVAL.cy + LANDMARK_V.mouth * OVAL.ry
 
-/** Head-pivot Y for flying teeth — tuned to MOUTH_TEXTURE_CY. */
-export function mouthPivotLocalY(): number {
-  return (0.5 - MOUTH_TEXTURE_CY) * 0.735 - 0.232
+/** Head-pivot Y for flying teeth — tuned to MOUTH_TEXTURE_CY, or a detected mouth cy. */
+export function mouthPivotLocalY(textureCy = MOUTH_TEXTURE_CY): number {
+  return (0.5 - textureCy) * 0.735 - 0.232
 }
